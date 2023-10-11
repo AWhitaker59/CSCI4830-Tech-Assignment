@@ -101,7 +101,7 @@ header {
 	font-size: 1rem;
 }
 
-.fa-minus {
+.fa-trash {
 	top: 3%;
 	right: 2%;
 	position: absolute;
@@ -109,7 +109,7 @@ header {
 	transition: 0.3s ease-out;
 }
 
-.fa-minus:hover {
+.fa-trash:hover {
 	color: red;
 }
 

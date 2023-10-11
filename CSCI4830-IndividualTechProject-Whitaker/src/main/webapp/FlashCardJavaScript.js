@@ -1,4 +1,3 @@
-let nextCardID = 0;
 document.addEventListener("DOMContentLoaded", () => {
     var contentArray = [];
 
@@ -17,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const flashcards = document.getElementById("flashcards");
 
 //function to actually build the cards 
-    const flashcardMaker = (text, delThisIndex, cardID) => {
+    const flashcardMaker = (text, cardID) => {
         const flashcard = document.createElement("div");
         const question = document.createElement('h2');
         const answer = document.createElement('h2');
@@ -33,9 +32,9 @@ document.addEventListener("DOMContentLoaded", () => {
         answer.setAttribute("style", "text-align:center; display:none; color:red");
         answer.textContent = text.my_answer;
 
-        del.className = "fas fa-minus";
+        del.className = "fas fa-trash";
         del.addEventListener("click", () => {
-            deleteFlashcard(delThisIndex);
+            deleteFlashcard(cardID);
         });
 
         flashcard.appendChild(question);
@@ -50,7 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 //function to get the current cards from DB
-    const loadFlashcardsFromDatabase = () => {
+    const getStoredCards = () => {
         $.ajax({
             type: "GET",
             url: "/Initial_Hello_World/FlashcardJava",
@@ -60,48 +59,37 @@ document.addEventListener("DOMContentLoaded", () => {
                     const flashcardsArray = response.flashcards;
 
                     flashcardsArray.forEach((flashcard) => {
-						const cardID = flashcard.ID; 
-						nextCardID = Math.max(nextCardID, cardID);
+						const cardID = flashcard.cardID; 
                         const question = flashcard.Question;
                         const answer = flashcard.Answer;
 
-                        contentArray.push({
-                            'my_question': question,
-                            'my_answer': answer,
-                            'cardID': cardID
-                        });
+                        const text = {
+                        'my_question': question,
+                        'my_answer': answer
+                   		};
 
-                        flashcardMaker({
-                            'my_question': question,
-                            'my_answer': answer,
-                            'cardID': cardID
-                        });
-                    });
+                    	flashcardMaker(text, cardID);
+                });
                 } else {
-                    console.error("Failed to load flashcards from the database.");
+                    console.error("Failed get flashcards");
                 }
             },
             error: function (errorThrown) {
-                console.error("Failed to load flashcards from the database. Error: " + errorThrown);
+                console.error("Failed to get flashcards: " + errorThrown);
             }
         });
     };
 
-    loadFlashcardsFromDatabase();
+    getStoredCards();
 
-//fucntion to add a flashcard on pressing the save button
+//function to add a flashcard on pressing the save button
     const addFlashcard = () => {
-		nextCardID ++;
 		
         const questionTextarea = document.querySelector("textarea[name='question']");
         const answerTextarea = document.querySelector("textarea[name='answer']");
-        console.log("Question:", questionTextarea.value);
-        console.log("Answer:", answerTextarea.value);
-
         const data = {
             question: questionTextarea.value,
             answer: answerTextarea.value,
-            cardID: nextCardID
         };
 
         $.ajax({
@@ -111,18 +99,17 @@ document.addEventListener("DOMContentLoaded", () => {
             contentType: "application/json",
             success: function (response) {
                 if (response.success) {
+					const cardID = response.cardID;
                     const question = questionTextarea.value;
                     const answer = answerTextarea.value;
-                    contentArray.push({
+
+                    const text = {
                         'my_question': question,
-                        'my_answer': answer,
-                        'cardID': nextCardID
-                    });
-                    flashcardMaker({
-                        'my_question': question,
-                        'my_answer': answer,
-                        'cardID': nextCardID
-                    });
+                        'my_answer': answer
+                   	};
+
+                    flashcardMaker(text, cardID);
+                
                     document.querySelector("textarea[name='question']").value = "";
                     document.querySelector("textarea[name='answer']").value = "";
                 } else {
@@ -130,16 +117,33 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             },
             error: function (errorThrown) {
-                console.error("Failed to add flashcard. Error: " + errorThrown);
+                console.error("Failed to add flashcard: " + errorThrown);
             }
         });
     };
 
 //function to delete cards
-    const deleteFlashcard = (index) => {
-        // Handle flashcard deletion here
-        // You should send a request to your servlet to delete the flashcard from the database
-        // After that, remove the flashcard from contentArray and the DOM
+    const deleteFlashcard = (cardID) => {
+		console.log("cardID:" + cardID);
+        $.ajax({
+	        type: "POST",
+	        url: "/Initial_Hello_World/FlashcardDeletion", 
+	        data: JSON.stringify({ cardID: cardID }),
+	        contentType: "application/json",
+	        success: function (response) {
+	            if (response.success) {
+	                const flashcardElement = document.querySelector(`.flashcard[data-cardid="${cardID}"]`);
+	                if (flashcardElement) {
+	                    flashcardElement.remove();
+	                }
+	            } else {
+	                console.error("Card could not be deleted");
+	            }
+	        },
+	        error: function (errorThrown) {
+	            console.error("Card could not be deleted: " + errorThrown);
+	        }
+    	});
     };
 
 //function to show/hide answer
